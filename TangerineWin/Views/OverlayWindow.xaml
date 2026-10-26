@@ -1,0 +1,394 @@
+<Window x:Class="TangerineWin.Views.OverlayWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+
+        Width="620"
+        Height="620"
+
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        ShowActivated="False"
+        Topmost="True"
+
+        AllowDrop="True"
+
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+
+        PreviewDragEnter="OnPreviewDragEnter"
+        PreviewDragOver="OnPreviewDragOver"
+        PreviewDrop="OnPreviewDrop">
+
+    <Window.Resources>
+
+        <Style x:Key="ActionButtonStyle"
+               TargetType="Button">
+
+            <Setter Property="Width"
+                    Value="92"/>
+
+            <Setter Property="Height"
+                    Value="92"/>
+
+            <Setter Property="Padding"
+                    Value="5"/>
+
+            <Setter Property="Background"
+                    Value="#F7F8FA"/>
+
+            <Setter Property="BorderBrush"
+                    Value="#CED6E0"/>
+
+            <Setter Property="BorderThickness"
+                    Value="1"/>
+
+            <Setter Property="Cursor"
+                    Value="Hand"/>
+
+            <Setter Property="FocusVisualStyle"
+                    Value="{x:Null}"/>
+
+            <Setter Property="HorizontalContentAlignment"
+                    Value="Center"/>
+
+            <Setter Property="VerticalContentAlignment"
+                    Value="Center"/>
+
+            <Setter Property="Template">
+
+                <Setter.Value>
+
+                    <ControlTemplate TargetType="Button">
+
+                        <Grid>
+
+                            <Ellipse Margin="3"
+                                     Fill="#06000000">
+
+                                <Ellipse.Effect>
+
+                                    <DropShadowEffect Color="#59697F"
+                                                      BlurRadius="13"
+                                                      ShadowDepth="3"
+                                                      Direction="270"
+                                                      Opacity="0.16"/>
+
+                                </Ellipse.Effect>
+
+                            </Ellipse>
+
+
+                            <Border Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="46">
+
+                                <Grid>
+
+                                    <Border Margin="1"
+                                            CornerRadius="45"
+                                            BorderBrush="#8AFFFFFF"
+                                            BorderThickness="1"
+                                            IsHitTestVisible="False"/>
+
+                                    <ContentPresenter Margin="{TemplateBinding Padding}"
+                                                      HorizontalAlignment="Center"
+                                                      VerticalAlignment="Center"/>
+
+                                </Grid>
+
+                            </Border>
+
+                        </Grid>
+
+                    </ControlTemplate>
+
+                </Setter.Value>
+
+            </Setter>
+
+        </Style>
+
+    </Window.Resources>
+
+
+    <Grid x:Name="RootContainer"
+          Width="620"
+          Height="620"
+          Background="Transparent">
+
+
+        <!-- Soft ambient -->
+        <Ellipse Width="530"
+                 Height="530"
+                 HorizontalAlignment="Center"
+                 VerticalAlignment="Center"
+                 Fill="#050B1420"
+                 IsHitTestVisible="False">
+
+            <Ellipse.Effect>
+                <BlurEffect Radius="34"/>
+            </Ellipse.Effect>
+
+        </Ellipse>
+
+
+        <!-- Main orbit -->
+        <Ellipse Width="474"
+                 Height="474"
+                 HorizontalAlignment="Center"
+                 VerticalAlignment="Center"
+                 Stroke="#3DC4CDD8"
+                 StrokeThickness="1"
+                 IsHitTestVisible="False"/>
+
+        <Ellipse Width="438"
+                 Height="438"
+                 HorizontalAlignment="Center"
+                 VerticalAlignment="Center"
+                 Stroke="#1CC1CAD6"
+                 StrokeThickness="1"
+                 IsHitTestVisible="False"/>
+
+
+        <!-- Connector lines -->
+        <Canvas x:Name="ConnectorCanvas"
+                Width="620"
+                Height="620"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                IsHitTestVisible="False"/>
+
+
+        <!-- Actions -->
+        <Canvas x:Name="ActionCanvas"
+                Width="620"
+                Height="620"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center">
+
+            <Button x:Name="Action1"
+                    Style="{StaticResource ActionButtonStyle}"
+                    Visibility="Collapsed"
+                    Click="OnActionClick"/>
+
+            <Button x:Name="Action2"
+                    Style="{StaticResource ActionButtonStyle}"
+                    Visibility="Collapsed"
+                    Click="OnActionClick"/>
+
+            <Button x:Name="Action3"
+                    Style="{StaticResource ActionButtonStyle}"
+                    Visibility="Collapsed"
+                    Click="OnActionClick"/>
+
+            <Button x:Name="Action4"
+                    Style="{StaticResource ActionButtonStyle}"
+                    Visibility="Collapsed"
+                    Click="OnActionClick"/>
+
+            <Button x:Name="Action5"
+                    Style="{StaticResource ActionButtonStyle}"
+                    Visibility="Collapsed"
+                    Click="OnActionClick"/>
+
+            <Button x:Name="Action6"
+                    Style="{StaticResource ActionButtonStyle}"
+                    Visibility="Collapsed"
+                    Click="OnActionClick"/>
+
+            <Button x:Name="Action7"
+                    Style="{StaticResource ActionButtonStyle}"
+                    Visibility="Collapsed"
+                    Click="OnActionClick"/>
+
+            <Button x:Name="Action8"
+                    Style="{StaticResource ActionButtonStyle}"
+                    Visibility="Collapsed"
+                    Click="OnActionClick"/>
+
+            <Button x:Name="Action9"
+                    Style="{StaticResource ActionButtonStyle}"
+                    Visibility="Collapsed"
+                    Click="OnActionClick"/>
+
+            <Button x:Name="Action10"
+                    Style="{StaticResource ActionButtonStyle}"
+                    Visibility="Collapsed"
+                    Click="OnActionClick"/>
+
+            <Button x:Name="Action11"
+                    Style="{StaticResource ActionButtonStyle}"
+                    Visibility="Collapsed"
+                    Click="OnActionClick"/>
+
+            <Button x:Name="Action12"
+                    Style="{StaticResource ActionButtonStyle}"
+                    Visibility="Collapsed"
+                    Click="OnActionClick"/>
+
+            <Button x:Name="Action13"
+                    Style="{StaticResource ActionButtonStyle}"
+                    Visibility="Collapsed"
+                    Click="OnActionClick"/>
+
+            <Button x:Name="Action14"
+                    Style="{StaticResource ActionButtonStyle}"
+                    Visibility="Collapsed"
+                    Click="OnActionClick"/>
+
+        </Canvas>
+
+
+        <!-- Center shadow -->
+        <Ellipse Width="222"
+                 Height="222"
+                 HorizontalAlignment="Center"
+                 VerticalAlignment="Center"
+                 Fill="#0D081422"
+                 IsHitTestVisible="False">
+
+            <Ellipse.Effect>
+
+                <DropShadowEffect Color="#526279"
+                                  BlurRadius="26"
+                                  ShadowDepth="7"
+                                  Direction="270"
+                                  Opacity="0.19"/>
+
+            </Ellipse.Effect>
+
+        </Ellipse>
+
+
+        <!-- Center -->
+        <Grid Width="216"
+              Height="216"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center"
+              IsHitTestVisible="False">
+
+            <Ellipse Fill="#EAF0F6"
+                 Stroke="#A9B8C9"
+                 StrokeThickness="1.1"/>
+
+            <Ellipse Width="210"
+                     Height="210"
+                     Stroke="#A0FFFFFF"
+                     StrokeThickness="1"/>
+
+
+            <StackPanel Width="176"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center">
+
+
+                <!-- File icon -->
+                <Grid Width="69"
+                      Height="75"
+                      HorizontalAlignment="Center"
+                      Margin="0,0,0,9">
+
+                    <Border Width="57"
+                            Height="67"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Top"
+                            Background="#FFFFFF"
+                            BorderBrush="#D2DAE4"
+                            BorderThickness="1"
+                            CornerRadius="10">
+
+                        <Border.Effect>
+
+                            <DropShadowEffect Color="#708096"
+                                              BlurRadius="10"
+                                              ShadowDepth="3"
+                                              Direction="270"
+                                              Opacity="0.16"/>
+
+                        </Border.Effect>
+
+                    </Border>
+
+
+                    <Path Data="M 41,2 L 57,18 L 41,18 Z"
+                          Width="57"
+                          Height="67"
+                          Stretch="None"
+                          Fill="#E2E8F0"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Top"
+                          Margin="0,3,0,0"/>
+
+
+                    <Border x:Name="FileTypeBadge"
+                            MinWidth="40"
+                            Height="22"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Bottom"
+                            Margin="0,0,0,3"
+                            Padding="6,0"
+                            Background="#E14F56"
+                            CornerRadius="6">
+
+                        <TextBlock x:Name="FileTypeText"
+                                   Text="PDF"
+                                   FontFamily="Segoe UI"
+                                   FontSize="8.5"
+                                   FontWeight="Bold"
+                                   Foreground="White"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
+
+                    </Border>
+
+                </Grid>
+
+
+                <TextBlock x:Name="FileNameText"
+                           Text="Drag file"
+                           MaxWidth="173"
+                           FontFamily="Segoe UI"
+                           FontSize="14.5"
+                           FontWeight="SemiBold"
+                           Foreground="#21344C"
+                           HorizontalAlignment="Center"
+                           TextAlignment="Center"
+                           TextTrimming="CharacterEllipsis"/>
+
+
+                <TextBlock x:Name="FileMetaText"
+                           Text="drop a file to begin"
+                           Margin="0,5,0,0"
+                           FontFamily="Segoe UI"
+                           FontSize="9.5"
+                           Foreground="#5F748B"
+                           HorizontalAlignment="Center"
+                           TextAlignment="Center"/>
+
+
+                <Border Margin="0,10,0,0"
+                        Padding="10,4"
+                        HorizontalAlignment="Center"
+                        Background="#DCE5EE"
+                        CornerRadius="10">
+
+                    <TextBlock Text="drop onto an action"
+                               FontFamily="Segoe UI"
+                               FontSize="8"
+                               FontWeight="SemiBold"
+                               Foreground="#4E647A"/>
+
+                </Border>
+
+            </StackPanel>
+
+        </Grid>
+
+    </Grid>
+
+</Window>

@@ -1,0 +1,347 @@
+﻿<Window x:Class="TangerineWin.Views.ImageEditorDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Image Editor"
+        Width="1200"
+        Height="800"
+        MinWidth="900"
+        MinHeight="650"
+        WindowStartupLocation="CenterScreen"
+        Background="#FF1E1E1E"
+        Foreground="White"
+        Topmost="True">
+
+    <Grid Margin="16">
+
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="280"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- IMAGE -->
+        <Grid Grid.Column="0"
+              Margin="0,0,16,0">
+
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <Grid Margin="0,0,0,12">
+
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel>
+
+                    <TextBlock Text="Редактор изображения"
+                   FontSize="21"
+                   FontWeight="SemiBold"/>
+
+                    <TextBlock x:Name="ImageSizeText"
+                   Foreground="#FFAAAAAA"
+                   Margin="0,4,0,0"/>
+
+                </StackPanel>
+
+                <StackPanel Grid.Column="1"
+                Orientation="Horizontal"
+                VerticalAlignment="Center">
+
+                    <Button x:Name="FitButton"
+                Content="FIT"
+                Width="60"
+                Height="32"
+                Margin="0,0,6,0"
+                FontWeight="SemiBold"
+                Click="OnFitClick"/>
+
+                    <Button x:Name="ActualSizeButton"
+                Content="100%"
+                Width="60"
+                Height="32"
+                Click="OnActualSizeClick"/>
+
+                </StackPanel>
+
+            </Grid>
+
+            <Border Grid.Row="1"
+                    Background="#FF111111"
+                    BorderBrush="#FF444444"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    ClipToBounds="True">
+
+                <Grid>
+
+                    <!-- FIT MODE -->
+                    <Grid x:Name="FitPreviewContainer">
+
+                        <Image x:Name="PreviewImage"
+               Stretch="Uniform"/>
+
+                        <Canvas x:Name="SelectionCanvas"
+                Background="Transparent"
+                MouseLeftButtonDown="OnMouseLeftButtonDown"
+                MouseMove="OnMouseMove"
+                MouseLeftButtonUp="OnMouseLeftButtonUp">
+
+                            <Rectangle x:Name="SelectionRectangle"
+                       Visibility="Collapsed"
+                       Stroke="White"
+                       StrokeThickness="2"
+                       Fill="#33FFFFFF"/>
+
+                        </Canvas>
+
+                    </Grid>
+
+                    <!-- 100% MODE -->
+                    <ScrollViewer x:Name="ActualSizeScrollViewer"
+                  Visibility="Collapsed"
+                  HorizontalScrollBarVisibility="Auto"
+                  VerticalScrollBarVisibility="Auto"
+                  Background="#FF111111">
+
+                        <Image x:Name="ActualSizeImage"
+               Stretch="None"
+               HorizontalAlignment="Left"
+               VerticalAlignment="Top"/>
+
+                    </ScrollViewer>
+
+                    <!-- SIZE -->
+                    <Border HorizontalAlignment="Right"
+            VerticalAlignment="Top"
+            Margin="12"
+            Padding="8,4"
+            Background="#CC000000"
+            CornerRadius="4"
+            IsHitTestVisible="False">
+
+                        <TextBlock x:Name="ImageOverlaySizeText"
+                   Foreground="White"
+                   FontSize="13"
+                   FontWeight="SemiBold"/>
+
+                    </Border>
+
+                    <!-- QUALITY -->
+                    <Border HorizontalAlignment="Left"
+            VerticalAlignment="Bottom"
+            Margin="12"
+            Padding="8,4"
+            Background="#CC000000"
+            CornerRadius="4"
+            IsHitTestVisible="False">
+
+                        <TextBlock x:Name="ImageOverlayQualityText"
+                   Foreground="White"
+                   FontSize="13"/>
+
+                    </Border>
+
+                </Grid>
+
+            </Border>
+
+            <Grid Grid.Row="2"
+                  Margin="0,12,0,0">
+
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock x:Name="SelectionSizeText"
+                           Text="Область не выбрана"
+                           VerticalAlignment="Center"
+                           Foreground="#FFBBBBBB"/>
+
+                <Button Grid.Column="1"
+                        Content="Применить обрезку"
+                        Width="150"
+                        Height="34"
+                        Click="OnApplyCropClick"/>
+
+            </Grid>
+
+        </Grid>
+
+        <!-- CONTROLS -->
+        <Border Grid.Column="1"
+                Background="#FF292929"
+                BorderBrush="#FF444444"
+                BorderThickness="1"
+                CornerRadius="6"
+                Padding="16">
+
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+
+                <StackPanel>
+
+                    <!-- ROTATE -->
+                    <TextBlock Text="Поворот"
+                               FontSize="15"
+                               FontWeight="SemiBold"/>
+
+                    <Grid Margin="0,10,0,0">
+
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Button Content="↶ 90°"
+                                Height="36"
+                                Margin="0,0,5,0"
+                                Click="OnRotateLeftClick"/>
+
+                        <Button Grid.Column="1"
+                                Content="↷ 90°"
+                                Height="36"
+                                Margin="5,0,0,0"
+                                Click="OnRotateRightClick"/>
+
+                    </Grid>
+
+                    <!-- FLIP -->
+                    <TextBlock Text="Отражение"
+                               FontSize="15"
+                               FontWeight="SemiBold"
+                               Margin="0,22,0,0"/>
+
+                    <Grid Margin="0,10,0,0">
+
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Button Content="↔"
+                                ToolTip="Отразить по горизонтали"
+                                Height="36"
+                                Margin="0,0,5,0"
+                                Click="OnFlipHorizontalClick"/>
+
+                        <Button Grid.Column="1"
+                                Content="↕"
+                                ToolTip="Отразить по вертикали"
+                                Height="36"
+                                Margin="5,0,0,0"
+                                Click="OnFlipVerticalClick"/>
+
+                    </Grid>
+
+                    <!-- RESIZE -->
+                    <TextBlock Text="Размер"
+                               FontSize="15"
+                               FontWeight="SemiBold"
+                               Margin="0,22,0,0"/>
+
+                    <TextBlock Text="Вписать в размер, px"
+                               Foreground="#FFAAAAAA"
+                               FontSize="12"
+                               Margin="0,5,0,8"/>
+
+                    <Grid>
+
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBox x:Name="WidthTextBox"
+                                 Height="32"
+                                 VerticalContentAlignment="Center"/>
+
+                        <TextBlock Grid.Column="1"
+                                   Text="×"
+                                   Margin="8,0"
+                                   VerticalAlignment="Center"/>
+
+                        <TextBox x:Name="HeightTextBox"
+                                 Grid.Column="2"
+                                 Height="32"
+                                 VerticalContentAlignment="Center"/>
+
+                    </Grid>
+
+                    <Button Content="Применить размер"
+                            Height="34"
+                            Margin="0,8,0,0"
+                            Click="OnApplyResizeClick"/>
+
+                    <!-- QUALITY -->
+                    <TextBlock Text="Качество"
+                               FontSize="15"
+                               FontWeight="SemiBold"
+                               Margin="0,22,0,0"/>
+
+                    <Grid Margin="0,8,0,0">
+
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="45"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Slider x:Name="QualitySlider"
+                                Minimum="1"
+                                Maximum="100"
+                                Value="85"
+                                TickFrequency="1"
+                                ValueChanged="OnQualityChanged"/>
+
+                        <TextBlock x:Name="QualityText"
+                                   Grid.Column="1"
+                                   Text="85"
+                                   HorizontalAlignment="Right"
+                                   VerticalAlignment="Center"/>
+
+                    </Grid>
+
+                    <TextBlock Text="Для JPG и WEBP"
+                               Foreground="#FF888888"
+                               FontSize="11"/>
+
+
+                    <!-- METADATA -->
+                    <CheckBox x:Name="RemoveMetadataCheckBox"
+                              Content="Удалить EXIF / GPS / metadata"
+                              Margin="0,22,0,0"
+                              IsChecked="False"/>
+
+                    <!-- RESET -->
+                    <Button Content="Сбросить все изменения"
+                            Height="34"
+                            Margin="0,24,0,0"
+                            Click="OnResetClick"/>
+
+                    <Separator Margin="0,20"/>
+
+                    <!-- SAVE -->
+                    <Button Content="Сохранить"
+                            Height="42"
+                            FontWeight="SemiBold"
+                            IsDefault="True"
+                            Click="OnSaveClick"/>
+
+                    <Button Content="Отмена"
+                            Height="34"
+                            Margin="0,8,0,0"
+                            IsCancel="True"/>
+
+                </StackPanel>
+
+            </ScrollViewer>
+
+        </Border>
+
+    </Grid>
+
+</Window>
