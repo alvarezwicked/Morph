@@ -99,7 +99,7 @@ public partial class OverlayWindow : Window
 
     private WpfButton? _activeActionButton;
 
-
+    private bool _isShowingOverlay;
     public IReadOnlyList<string> DraggedFiles
     {
         get;
@@ -186,166 +186,189 @@ public partial class OverlayWindow : Window
 
     public void ShowNearCursor()
     {
-        DraggedFiles =
-            Array.Empty<string>();
-
-        ResetUi();
-
-        if (!NativeMethods.GetCursorPos(
-                out var cursorPoint))
+        //
+        // Не запускаем повторный показ,
+        // если окно уже видно или сейчас открывается.
+        //
+        if (_isShowingOverlay ||
+            IsVisible)
         {
             return;
         }
 
-        //
-        // Создаём/показываем HWND прежде чем
-        // рассчитывать его физический размер.
-        //
-        if (!IsVisible)
+        _isShowingOverlay =
+            true;
+
+        try
         {
-            Show();
-        }
+            DraggedFiles =
+                Array.Empty<string>();
 
-        UpdateLayout();
+            ResetUi();
 
-        var helper =
-            new WindowInteropHelper(
-                this);
+            if (!NativeMethods.GetCursorPos(
+                    out var cursorPoint))
+            {
+                return;
+            }
 
-        var hwnd =
-            helper.Handle;
+            //
+            // Создаём HWND, но НЕ показываем окно.
+            //
+            // Это ключевой момент для Windows 11:
+            // окно сначала будет правильно позиционировано,
+            // и только потом станет видимым.
+            //
+            var helper =
+                new WindowInteropHelper(
+                    this);
 
-        if (hwnd ==
-            IntPtr.Zero)
-        {
-            return;
-        }
+            var hwnd =
+                helper.EnsureHandle();
 
-        //
-        // Получаем фактический размер окна
-        // в физических пикселях.
-        //
-        if (!GetWindowRect(
+            if (hwnd ==
+                IntPtr.Zero)
+            {
+                return;
+            }
+
+            UpdateLayout();
+
+            //
+            // Получаем реальный размер окна
+            // в физических пикселях.
+            //
+            if (!GetWindowRect(
+                    hwnd,
+                    out var windowRect))
+            {
+                return;
+            }
+
+            var windowWidth =
+                windowRect.Right -
+                windowRect.Left;
+
+            var windowHeight =
+                windowRect.Bottom -
+                windowRect.Top;
+
+            //
+            // Определяем монитор, на котором
+            // сейчас находится курсор.
+            //
+            var screen =
+                WinFormsScreen.FromPoint(
+                    new DrawingPoint(
+                        cursorPoint.X,
+                        cursorPoint.Y));
+
+            var workArea =
+                screen.WorkingArea;
+
+            const int margin =
+                10;
+
+            //
+            // Центрируем интерфейс относительно курсора.
+            //
+            var targetLeft =
+                cursorPoint.X -
+                windowWidth / 2;
+
+            var targetTop =
+                cursorPoint.Y -
+                windowHeight / 2;
+
+            //
+            // Ограничиваем координаты рабочей областью.
+            //
+            var minimumLeft =
+                workArea.Left +
+                margin;
+
+            var minimumTop =
+                workArea.Top +
+                margin;
+
+            var maximumLeft =
+                workArea.Right -
+                windowWidth -
+                margin;
+
+            var maximumTop =
+                workArea.Bottom -
+                windowHeight -
+                margin;
+
+            if (maximumLeft >=
+                minimumLeft)
+            {
+                targetLeft =
+                    Math.Clamp(
+                        targetLeft,
+                        minimumLeft,
+                        maximumLeft);
+            }
+            else
+            {
+                targetLeft =
+                    workArea.Left;
+            }
+
+            if (maximumTop >=
+                minimumTop)
+            {
+                targetTop =
+                    Math.Clamp(
+                        targetTop,
+                        minimumTop,
+                        maximumTop);
+            }
+            else
+            {
+                targetTop =
+                    workArea.Top;
+            }
+
+            //
+            // Сначала физически ставим скрытое окно
+            // на правильное место.
+            //
+            SetWindowPos(
                 hwnd,
-                out var windowRect))
-        {
-            return;
+                IntPtr.Zero,
+                targetLeft,
+                targetTop,
+                0,
+                0,
+                SWP_NOSIZE |
+                SWP_NOZORDER |
+                SWP_NOACTIVATE);
+
+            //
+            // Подготавливаем первый кадр анимации
+            // ДО Show().
+            //
+            PrepareOpenAnimationState();
+
+            //
+            // Только теперь показываем уже
+            // правильно расположенное окно.
+            //
+            Show();
+
+            //
+            // И запускаем анимацию явно.
+            //
+            PlayOpenAnimation();
         }
-
-        var windowWidth =
-            windowRect.Right -
-            windowRect.Left;
-
-        var windowHeight =
-            windowRect.Bottom -
-            windowRect.Top;
-
-        //
-        // Определяем монитор по реальной
-        // позиции курсора.
-        //
-        var screen =
-            WinFormsScreen.FromPoint(
-                new DrawingPoint(
-                    cursorPoint.X,
-                    cursorPoint.Y));
-
-        var workArea =
-            screen.WorkingArea;
-
-        const int margin =
-            10;
-
-        //
-        // Пытаемся расположить radial UI
-        // с центром в позиции курсора.
-        //
-        var targetLeft =
-            cursorPoint.X -
-            windowWidth / 2;
-
-        var targetTop =
-            cursorPoint.Y -
-            windowHeight / 2;
-
-        //
-        // Рабочие границы текущего монитора.
-        //
-        var minimumLeft =
-            workArea.Left +
-            margin;
-
-        var minimumTop =
-            workArea.Top +
-            margin;
-
-        var maximumLeft =
-            workArea.Right -
-            windowWidth -
-            margin;
-
-        var maximumTop =
-            workArea.Bottom -
-            windowHeight -
-            margin;
-
-        //
-        // Horizontal clamp.
-        //
-        if (maximumLeft >=
-            minimumLeft)
+        finally
         {
-            targetLeft =
-                Math.Clamp(
-                    targetLeft,
-                    minimumLeft,
-                    maximumLeft);
+            _isShowingOverlay =
+                false;
         }
-        else
-        {
-            targetLeft =
-                workArea.Left;
-        }
-
-        //
-        // Vertical clamp.
-        //
-        if (maximumTop >=
-            minimumTop)
-        {
-            targetTop =
-                Math.Clamp(
-                    targetTop,
-                    minimumTop,
-                    maximumTop);
-        }
-        else
-        {
-            targetTop =
-                workArea.Top;
-        }
-
-        //
-        // ВАЖНО:
-        //
-        // Window.Left / Top здесь не используем.
-        // SetWindowPos работает непосредственно
-        // в физических пикселях и поэтому корректен
-        // при DPI 100%, 125%, 150%, нескольких мониторах и т.д.
-        //
-        SetWindowPos(
-            hwnd,
-            IntPtr.Zero,
-            targetLeft,
-            targetTop,
-            0,
-            0,
-            SWP_NOSIZE |
-            SWP_NOZORDER |
-            SWP_NOACTIVATE);
     }
-
-
     // ====================================================
     // BUTTON COLLECTION
     // ====================================================
@@ -403,36 +426,22 @@ public partial class OverlayWindow : Window
             92;
 
         //
-        // Плотное кольцо вокруг центрального диска.
+        // Для небольшого количества действий
+        // используем отдельные компактные композиции.
         //
-        var radius =
-            buttons.Length switch
-            {
-                1 => 145,
-                2 => 150,
-                3 => 158,
-                4 => 164,
-                5 => 170,
-                6 => 176,
-                7 => 182,
-                8 => 187,
-                9 => 191,
-                10 => 195,
-                11 => 199,
-                12 => 202,
-                13 => 205,
-                _ => 208
-            };
+        var layout =
+            GetAdaptiveActionLayout(
+                buttons.Length);
 
         for (var i = 0;
              i < buttons.Length;
              i++)
         {
             var angleDegrees =
-                -90.0 +
-                360.0 *
-                i /
-                buttons.Length;
+                layout[i].Angle;
+
+            var radius =
+                layout[i].Radius;
 
             var angleRadians =
                 angleDegrees *
@@ -460,14 +469,12 @@ public partial class OverlayWindow : Window
             WpfCanvas.SetLeft(
                 buttons[i],
                 buttonCenterX -
-                buttonSize /
-                2.0);
+                buttonSize / 2.0);
 
             WpfCanvas.SetTop(
                 buttons[i],
                 buttonCenterY -
-                buttonSize /
-                2.0);
+                buttonSize / 2.0);
 
             AddOrbitConnector(
                 centerX,
@@ -477,6 +484,152 @@ public partial class OverlayWindow : Window
                 radius,
                 buttonSize);
         }
+    }
+
+    private static (double Angle, double Radius)[]
+    GetAdaptiveActionLayout(
+        int count)
+    {
+        switch (count)
+        {
+            case 1:
+                return new[]
+                {
+                (
+                    Angle: -90.0,
+                    Radius: 158.0
+                )
+            };
+
+            case 2:
+                return new[]
+                {
+                (
+                    Angle: -130.0,
+                    Radius: 168.0
+                ),
+                (
+                    Angle: -50.0,
+                    Radius: 168.0
+                )
+            };
+
+            case 3:
+                return new[]
+                {
+                (
+                    Angle: -90.0,
+                    Radius: 172.0
+                ),
+                (
+                    Angle: 30.0,
+                    Radius: 172.0
+                ),
+                (
+                    Angle: 150.0,
+                    Radius: 172.0
+                )
+            };
+
+            case 4:
+                return new[]
+                {
+                (
+                    Angle: -135.0,
+                    Radius: 176.0
+                ),
+                (
+                    Angle: -45.0,
+                    Radius: 176.0
+                ),
+                (
+                    Angle: 45.0,
+                    Radius: 176.0
+                ),
+                (
+                    Angle: 135.0,
+                    Radius: 176.0
+                )
+            };
+
+            case 5:
+                return CreateCircularLayout(
+                    count,
+                    180);
+
+            case 6:
+                return CreateCircularLayout(
+                    count,
+                    184);
+
+            case 7:
+                return CreateCircularLayout(
+                    count,
+                    188);
+
+            case 8:
+                return CreateCircularLayout(
+                    count,
+                    191);
+
+            case 9:
+                return CreateCircularLayout(
+                    count,
+                    194);
+
+            case 10:
+                return CreateCircularLayout(
+                    count,
+                    197);
+
+            case 11:
+                return CreateCircularLayout(
+                    count,
+                    200);
+
+            case 12:
+                return CreateCircularLayout(
+                    count,
+                    202);
+
+            case 13:
+                return CreateCircularLayout(
+                    count,
+                    205);
+
+            default:
+                return CreateCircularLayout(
+                    count,
+                    208);
+        }
+    }
+
+    private static (double Angle, double Radius)[]
+    CreateCircularLayout(
+        int count,
+        double radius)
+    {
+        var result =
+            new (double Angle, double Radius)[count];
+
+        for (var i = 0;
+             i < count;
+             i++)
+        {
+            result[i] =
+                (
+                    Angle:
+                        -90.0 +
+                        360.0 *
+                        i /
+                        count,
+
+                    Radius:
+                        radius
+                );
+        }
+
+        return result;
     }
 
 
@@ -829,6 +982,14 @@ public partial class OverlayWindow : Window
                         70,
                         211)),
 
+            "extract_zip" =>
+                BuildVectorIcon(
+                    GetExtractArchiveGeometry(),
+                    WpfColor.FromRgb(
+                        38,
+                        132,
+                        156)),
+
             "zip" =>
                 BuildVectorIcon(
                     GetArchiveGeometry(),
@@ -836,6 +997,7 @@ public partial class OverlayWindow : Window
                         84,
                         99,
                         121)),
+
 
             "pdf_to_txt" =>
                 BuildOfficeIcon(
@@ -1298,6 +1460,17 @@ public partial class OverlayWindow : Window
     }
 
 
+    private static WpfGeometry GetExtractArchiveGeometry()
+    {
+        return WpfGeometry.Parse(
+            "M5,3 L16,3 L20,7 L20,13 " +
+            "M16,3 L16,7 L20,7 " +
+            "M9,8 L12,8 M9,11 L12,11 " +
+            "M12,13 L12,21 " +
+            "M8.5,17.5 L12,21 L15.5,17.5 " +
+            "M5,21 L8,21 M16,21 L20,21");
+    }
+
     private static WpfGeometry GetArchiveGeometry()
     {
         return WpfGeometry.Parse(
@@ -1371,6 +1544,9 @@ public partial class OverlayWindow : Window
             "merge_pdf" =>
                 "Merge PDFs",
 
+            "extract_zip" =>
+                "Extract ZIP",
+
             "zip" =>
                 "ZIP Files",
 
@@ -1441,6 +1617,9 @@ public partial class OverlayWindow : Window
 
             "merge_pdf" =>
                 "Combine files",
+
+            "extract_zip" =>
+                "Unpack files",
 
             "zip" =>
                 "Compress",
@@ -1616,23 +1795,32 @@ public partial class OverlayWindow : Window
             return;
         }
 
-        if (visible)
-        {
-            PlayOpenAnimation();
-        }
-        else
+        //
+        // Анимацию появления здесь больше
+        // НЕ запускаем.
+        //
+        // Она запускается явно только после
+        // правильного позиционирования окна.
+        //
+        if (!visible)
         {
             DraggedFiles =
                 Array.Empty<string>();
 
             _activeActionButton =
                 null;
+
+            StopOpenAnimation();
         }
     }
 
 
-    private void PlayOpenAnimation()
+    private void PrepareOpenAnimationState()
     {
+        //
+        // Полностью останавливаем предыдущие
+        // анимации, если они вдруг остались.
+        //
         RootContainer.BeginAnimation(
             OpacityProperty,
             null);
@@ -1650,8 +1838,35 @@ public partial class OverlayWindow : Window
                 0.5,
                 0.5);
 
+        //
+        // Важно: opacity выставляется ДО Show().
+        //
         RootContainer.Opacity =
             0;
+    }
+
+
+    private void PlayOpenAnimation()
+    {
+        var scale =
+            RootContainer.RenderTransform
+                as WpfScaleTransform;
+
+        if (scale is null)
+        {
+            scale =
+                new WpfScaleTransform(
+                    0.97,
+                    0.97);
+
+            RootContainer.RenderTransform =
+                scale;
+        }
+
+        RootContainer.RenderTransformOrigin =
+            new WpfPoint(
+                0.5,
+                0.5);
 
         var easing =
             new CubicEase
@@ -1664,7 +1879,7 @@ public partial class OverlayWindow : Window
             new DoubleAnimation
             {
                 From =
-                    0.97,
+                    scale.ScaleX,
 
                 To =
                     1.0,
@@ -1681,7 +1896,7 @@ public partial class OverlayWindow : Window
             new DoubleAnimation
             {
                 From =
-                    0.97,
+                    scale.ScaleY,
 
                 To =
                     1.0,
@@ -1698,7 +1913,7 @@ public partial class OverlayWindow : Window
             new DoubleAnimation
             {
                 From =
-                    0,
+                    RootContainer.Opacity,
 
                 To =
                     1,
@@ -1724,6 +1939,34 @@ public partial class OverlayWindow : Window
             opacity);
     }
 
+
+    private void StopOpenAnimation()
+    {
+        RootContainer.BeginAnimation(
+            OpacityProperty,
+            null);
+
+        if (RootContainer.RenderTransform
+            is WpfScaleTransform scale)
+        {
+            scale.BeginAnimation(
+                WpfScaleTransform.ScaleXProperty,
+                null);
+
+            scale.BeginAnimation(
+                WpfScaleTransform.ScaleYProperty,
+                null);
+
+            scale.ScaleX =
+                1;
+
+            scale.ScaleY =
+                1;
+        }
+
+        RootContainer.Opacity =
+            1;
+    }
 
     // ====================================================
     // DRAG
@@ -2956,6 +3199,19 @@ public partial class OverlayWindow : Window
                     {
                         System.Diagnostics.Debug.WriteLine(
                             $"Image edited: {dialog.OutputPath}");
+                    }
+
+                    break;
+                }
+            case "extract_zip":
+                {
+                    var outputDirectories =
+                        await _zipService.ExtractAsync(files);
+
+                    foreach (var directory in outputDirectories)
+                    {
+                        System.Diagnostics.Debug.WriteLine(
+                            $"ZIP extracted: {directory}");
                     }
 
                     break;

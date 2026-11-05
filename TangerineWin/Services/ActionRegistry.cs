@@ -11,28 +11,39 @@ public sealed class ActionRegistry
         if (files.Count == 0)
             return Array.Empty<FileAction>();
 
-        // Пока для нескольких файлов предлагаем только ZIP.
         if (files.Count > 1)
         {
+            var allZip = files.All(path =>
+                Path.GetExtension(path).Equals(
+                    ".zip",
+                    StringComparison.OrdinalIgnoreCase));
+
+            if (allZip)
+            {
+                return new[]
+                {
+                    new FileAction("extract_zip", "EXTRACT")
+                };
+            }
+
             var allPdf = files.All(path =>
-                Path.GetExtension(path)
-                    .Equals(
-                        ".pdf",
-                        StringComparison.OrdinalIgnoreCase));
+                Path.GetExtension(path).Equals(
+                    ".pdf",
+                    StringComparison.OrdinalIgnoreCase));
 
             if (allPdf)
             {
                 return new[]
                 {
-            new FileAction("merge_pdf", "MERGE"),
-            new FileAction("zip", "ZIP")
-        };
+                    new FileAction("merge_pdf", "MERGE"),
+                    new FileAction("zip", "ZIP")
+                };
             }
 
             return new[]
             {
-        new FileAction("zip", "ZIP")
-    };
+                new FileAction("zip", "ZIP")
+            };
         }
 
         var extension = Path
@@ -41,6 +52,11 @@ public sealed class ActionRegistry
 
         return extension switch
         {
+            ".zip" => new[]
+            {
+                new FileAction("extract_zip", "EXTRACT")
+            },
+
             ".jpg" or ".jpeg" => new[]
             {
                 new FileAction("to_png", "PNG"),
