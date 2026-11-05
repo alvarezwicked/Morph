@@ -1,4 +1,4 @@
-# TangerineWin Starter
+# Morph Starter
 
 Минимальная заготовка Windows-приложения в духе Tangerine для macOS.
 
@@ -31,7 +31,7 @@
 
 ```powershell
 dotnet restore
-dotnet run --project .\TangerineWin\TangerineWin.csproj
+dotnet run --project .\Morph\Morph.csproj
 ```
 
 После запуска приложение появится в system tray.
