@@ -20,3 +20,6 @@ Output/
 # Windows
 Thumbs.db
 Desktop.ini
+
+/publish/
+/installer-output/
