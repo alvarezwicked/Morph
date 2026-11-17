@@ -100,6 +100,7 @@ public partial class OverlayWindow : Window
     private WpfButton? _activeActionButton;
 
     private bool _isShowingOverlay;
+
     public IReadOnlyList<string> DraggedFiles
     {
         get;
@@ -107,8 +108,14 @@ public partial class OverlayWindow : Window
     } = Array.Empty<string>();
 
 
+    // Событие обнаружения перетаскиваемых файлов.
     public event Action<IReadOnlyList<string>>?
         DragFilesDetected;
+
+
+    // Событие для системных уведомлений Windows.
+    public event Action<string, string, bool>?
+        NotificationRequested;
 
 
     // ====================================================
@@ -2053,68 +2060,81 @@ public partial class OverlayWindow : Window
     // DROP
     // ====================================================
 
+
     private async void OnPreviewDrop(
         object sender,
         System.Windows.DragEventArgs e)
     {
         if (DraggedFiles.Count == 0)
         {
-            ReadDraggedFiles(
-                e);
+            ReadDraggedFiles(e);
         }
 
         if (DraggedFiles.Count == 0)
         {
-            SetActiveButton(
-                null);
-
-            e.Effects =
-                WpfDragDropEffects.None;
-
-            e.Handled =
-                true;
-
+            SetActiveButton(null);
+            e.Effects = WpfDragDropEffects.None;
+            e.Handled = true;
             return;
         }
 
-        var button =
-            FindParentButton(
-                e.OriginalSource
-                    as DependencyObject);
+        var button = FindParentButton(
+            e.OriginalSource as DependencyObject);
 
-        if (button?.Tag
-            is not FileAction action)
+        if (button?.Tag is not FileAction action)
         {
-            SetActiveButton(
-                null);
-
-            e.Effects =
-                WpfDragDropEffects.None;
-
-            e.Handled =
-                true;
-
+            SetActiveButton(null);
+            e.Effects = WpfDragDropEffects.None;
+            e.Handled = true;
             return;
         }
 
-        e.Effects =
-            WpfDragDropEffects.Copy;
+        e.Effects = WpfDragDropEffects.Copy;
+        e.Handled = true;
 
-        e.Handled =
-            true;
+        // Сохраняем информацию до выполнения действия.
+        var sourceFiles = DraggedFiles.ToArray();
 
-        SetActiveButton(
-            null);
+        var fileDescription =
+            sourceFiles.Length == 1
+                ? Path.GetFileName(sourceFiles[0])
+                : $"{sourceFiles.Length} files";
+
+        SetActiveButton(null);
 
         try
         {
-            await ExecuteActionAsync(
-                action);
+            // Метод возвращает false при отмене.
+            bool completed =
+                await ExecuteActionAsync(action);
+
+            if (!completed)
+                return;
+
+            string title = action.Id switch
+            {
+                "zip" => "Archive created",
+                "extract_zip" => "Extraction completed",
+                "merge_pdf" => "PDFs merged",
+                "split_pdf" => "PDF split completed",
+                "edit_image" => "Image saved",
+                _ => "Conversion completed"
+            };
+
+            NotificationRequested?.Invoke(
+                title,
+                $"{fileDescription} processed successfully.",
+                false);
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine(
                 $"Action failed: {ex}");
+
+            NotificationRequested?.Invoke(
+                "Operation failed",
+                $"{fileDescription}: {ex.Message}",
+                true);
 
             WpfMessageBox.Show(
                 ex.Message,
@@ -2123,6 +2143,7 @@ public partial class OverlayWindow : Window
                 MessageBoxImage.Error);
         }
     }
+
 
 
     // ====================================================
@@ -2780,16 +2801,13 @@ public partial class OverlayWindow : Window
     // EXECUTION
     // ====================================================
 
-    private async Task ExecuteActionAsync(
-        FileAction action)
+
+    private async Task<bool> ExecuteActionAsync(FileAction action)
     {
-        var files =
-            DraggedFiles.ToArray();
+        var files = DraggedFiles.ToArray();
 
         if (files.Length == 0)
-        {
-            return;
-        }
+            return false;
 
         switch (action.Id)
         {
@@ -2798,13 +2816,11 @@ public partial class OverlayWindow : Window
             case "to_webp":
                 {
                     if (files.Length != 1)
-                        return;
+                        return false;
 
                     var outputPath =
-                        await _imageConversionService
-                            .ConvertAsync(
-                                files[0],
-                                action.Id);
+                        await _imageConversionService.ConvertAsync(
+                            files[0], action.Id);
 
                     System.Diagnostics.Debug.WriteLine(
                         $"Converted: {outputPath}");
@@ -2816,13 +2832,11 @@ public partial class OverlayWindow : Window
             case "pdf_to_jpg":
                 {
                     if (files.Length != 1)
-                        return;
+                        return false;
 
                     var outputDirectory =
-                        await _pdfRenderService
-                            .RenderToImagesAsync(
-                                files[0],
-                                action.Id);
+                        await _pdfRenderService.RenderToImagesAsync(
+                            files[0], action.Id);
 
                     System.Diagnostics.Debug.WriteLine(
                         $"PDF pages rendered: {outputDirectory}");
@@ -2833,38 +2847,25 @@ public partial class OverlayWindow : Window
             case "to_pdf":
                 {
                     if (files.Length != 1)
-                        return;
+                        return false;
 
-                    var sourcePath =
-                        files[0];
-
-                    var extension =
-                        Path.GetExtension(
-                            sourcePath)
+                    var sourcePath = files[0];
+                    var extension = Path.GetExtension(sourcePath)
                         .ToLowerInvariant();
 
                     string outputPath;
 
-                    if (extension is
-                        ".jpg" or
-                        ".jpeg" or
-                        ".png" or
-                        ".webp")
+                    if (extension is ".jpg" or ".jpeg" or ".png" or ".webp")
                     {
                         outputPath =
                             await _pdfConversionService
-                                .ConvertImageToPdfAsync(
-                                    sourcePath);
+                                .ConvertImageToPdfAsync(sourcePath);
                     }
-                    else if (extension is
-                        ".docx" or
-                        ".xlsx" or
-                        ".pptx")
+                    else if (extension is ".docx" or ".xlsx" or ".pptx")
                     {
                         outputPath =
                             await _officeConversionService
-                                .ConvertToPdfAsync(
-                                    sourcePath);
+                                .ConvertToPdfAsync(sourcePath);
                     }
                     else
                     {
@@ -2881,12 +2882,11 @@ public partial class OverlayWindow : Window
             case "pdf_to_txt":
                 {
                     if (files.Length != 1)
-                        return;
+                        return false;
 
                     var outputPath =
                         await _pdfExtractionService
-                            .ExtractToTxtAsync(
-                                files[0]);
+                            .ExtractToTxtAsync(files[0]);
 
                     System.Diagnostics.Debug.WriteLine(
                         $"TXT extracted: {outputPath}");
@@ -2897,12 +2897,11 @@ public partial class OverlayWindow : Window
             case "pdf_to_docx":
                 {
                     if (files.Length != 1)
-                        return;
+                        return false;
 
                     var outputPath =
                         await _pdfExtractionService
-                            .ExtractToDocxAsync(
-                                files[0]);
+                            .ExtractToDocxAsync(files[0]);
 
                     System.Diagnostics.Debug.WriteLine(
                         $"DOCX extracted: {outputPath}");
@@ -2913,9 +2912,7 @@ public partial class OverlayWindow : Window
             case "merge_pdf":
                 {
                     var outputPath =
-                        await _pdfMergeService
-                            .MergeAsync(
-                                files);
+                        await _pdfMergeService.MergeAsync(files);
 
                     System.Diagnostics.Debug.WriteLine(
                         $"PDF merged: {outputPath}");
@@ -2926,12 +2923,11 @@ public partial class OverlayWindow : Window
             case "extract_pdf_images":
                 {
                     if (files.Length != 1)
-                        return;
+                        return false;
 
                     var outputDirectory =
                         await _pdfImageExtractionService
-                            .ExtractAsync(
-                                files[0]);
+                            .ExtractAsync(files[0]);
 
                     System.Diagnostics.Debug.WriteLine(
                         $"PDF images extracted: {outputDirectory}");
@@ -2942,12 +2938,10 @@ public partial class OverlayWindow : Window
             case "split_pdf":
                 {
                     if (files.Length != 1)
-                        return;
+                        return false;
 
                     var outputDirectory =
-                        await _pdfSplitService
-                            .SplitAsync(
-                                files[0]);
+                        await _pdfSplitService.SplitAsync(files[0]);
 
                     System.Diagnostics.Debug.WriteLine(
                         $"PDF split: {outputDirectory}");
@@ -2958,12 +2952,11 @@ public partial class OverlayWindow : Window
             case "pdf_to_ocr_docx":
                 {
                     if (files.Length != 1)
-                        return;
+                        return false;
 
                     var outputPath =
                         await _pdfOcrDocxService
-                            .ConvertAsync(
-                                files[0]);
+                            .ConvertAsync(files[0]);
 
                     System.Diagnostics.Debug.WriteLine(
                         $"OCR DOCX created: {outputPath}");
@@ -2974,30 +2967,20 @@ public partial class OverlayWindow : Window
             case "reorder_pdf_pages":
                 {
                     if (files.Length != 1)
-                        return;
+                        return false;
 
-                    var sourcePath =
-                        files[0];
+                    var dialog = new ReorderPagesDialog();
 
-                    var dialog =
-                        new ReorderPagesDialog();
-
-                    if (dialog.ShowDialog() !=
-                        true)
-                    {
-                        return;
-                    }
+                    if (dialog.ShowDialog() != true)
+                        return false;
 
                     var pages =
                         _pdfPageExtractionService
-                            .ParsePageRange(
-                                dialog.PageOrder);
+                            .ParsePageRange(dialog.PageOrder);
 
                     var outputPath =
                         await _pdfPageReorderService
-                            .ReorderAsync(
-                                sourcePath,
-                                pages);
+                            .ReorderAsync(files[0], pages);
 
                     System.Diagnostics.Debug.WriteLine(
                         $"PDF pages reordered: {outputPath}");
@@ -3008,31 +2991,22 @@ public partial class OverlayWindow : Window
             case "rotate_pdf_pages":
                 {
                     if (files.Length != 1)
-                        return;
+                        return false;
 
-                    var sourcePath =
-                        files[0];
+                    var dialog = new RotatePagesDialog();
 
-                    var dialog =
-                        new RotatePagesDialog();
-
-                    if (dialog.ShowDialog() !=
-                        true)
-                    {
-                        return;
-                    }
+                    if (dialog.ShowDialog() != true)
+                        return false;
 
                     var pages =
                         _pdfPageExtractionService
-                            .ParsePageRange(
-                                dialog.PageRange);
+                            .ParsePageRange(dialog.PageRange);
 
                     var outputPath =
-                        await _pdfPageRotationService
-                            .RotateAsync(
-                                sourcePath,
-                                pages,
-                                dialog.RotationDegrees);
+                        await _pdfPageRotationService.RotateAsync(
+                            files[0],
+                            pages,
+                            dialog.RotationDegrees);
 
                     System.Diagnostics.Debug.WriteLine(
                         $"PDF pages rotated: {outputPath}");
@@ -3043,30 +3017,20 @@ public partial class OverlayWindow : Window
             case "extract_pdf_pages":
                 {
                     if (files.Length != 1)
-                        return;
+                        return false;
 
-                    var sourcePath =
-                        files[0];
+                    var dialog = new PageRangeDialog();
 
-                    var dialog =
-                        new PageRangeDialog();
-
-                    if (dialog.ShowDialog() !=
-                        true)
-                    {
-                        return;
-                    }
+                    if (dialog.ShowDialog() != true)
+                        return false;
 
                     var pages =
                         _pdfPageExtractionService
-                            .ParsePageRange(
-                                dialog.PageRange);
+                            .ParsePageRange(dialog.PageRange);
 
                     var outputPath =
                         await _pdfPageExtractionService
-                            .ExtractAsync(
-                                sourcePath,
-                                pages);
+                            .ExtractAsync(files[0], pages);
 
                     System.Diagnostics.Debug.WriteLine(
                         $"PDF pages extracted: {outputPath}");
@@ -3077,25 +3041,16 @@ public partial class OverlayWindow : Window
             case "pdf_to_xlsx":
                 {
                     if (files.Length != 1)
-                        return;
+                        return false;
 
-                    var sourcePath =
-                        files[0];
+                    var dialog = new PdfToExcelDialog();
 
-                    var dialog =
-                        new PdfToExcelDialog();
-
-                    if (dialog.ShowDialog() !=
-                        true)
-                    {
-                        return;
-                    }
+                    if (dialog.ShowDialog() != true)
+                        return false;
 
                     var outputPath =
                         await _pdfExcelExtractionService
-                            .ConvertAsync(
-                                sourcePath,
-                                dialog.ExportMode);
+                            .ConvertAsync(files[0], dialog.ExportMode);
 
                     System.Diagnostics.Debug.WriteLine(
                         $"XLSX created: {outputPath}");
@@ -3106,30 +3061,20 @@ public partial class OverlayWindow : Window
             case "delete_pdf_pages":
                 {
                     if (files.Length != 1)
-                        return;
+                        return false;
 
-                    var sourcePath =
-                        files[0];
+                    var dialog = new DeletePagesDialog();
 
-                    var dialog =
-                        new DeletePagesDialog();
-
-                    if (dialog.ShowDialog() !=
-                        true)
-                    {
-                        return;
-                    }
+                    if (dialog.ShowDialog() != true)
+                        return false;
 
                     var pages =
                         _pdfPageExtractionService
-                            .ParsePageRange(
-                                dialog.PageRange);
+                            .ParsePageRange(dialog.PageRange);
 
                     var outputPath =
                         await _pdfPageDeletionService
-                            .DeleteAsync(
-                                sourcePath,
-                                pages);
+                            .DeleteAsync(files[0], pages);
 
                     System.Diagnostics.Debug.WriteLine(
                         $"PDF pages deleted: {outputPath}");
@@ -3140,41 +3085,31 @@ public partial class OverlayWindow : Window
             case "pdf_to_pptx":
                 {
                     if (files.Length != 1)
-                        return;
+                        return false;
 
-                    var sourcePath =
-                        files[0];
+                    var dialog = new PdfToPowerPointDialog();
 
-                    var dialog =
-                        new PdfToPowerPointDialog();
+                    if (dialog.ShowDialog() != true)
+                        return false;
 
-                    if (dialog.ShowDialog() !=
-                        true)
-                    {
-                        return;
-                    }
-
-                    if (dialog.ExportMode ==
-                        PdfPowerPointExportMode.Exact)
+                    if (dialog.ExportMode == PdfPowerPointExportMode.Exact)
                     {
                         var outputPath =
                             await _pdfPowerPointService
-                                .ConvertAsync(
-                                    sourcePath);
+                                .ConvertAsync(files[0]);
 
                         System.Diagnostics.Debug.WriteLine(
                             $"PPTX created: {outputPath}");
-
-                        break;
                     }
+                    else
+                    {
+                        var outputPath =
+                            await _pdfEditablePowerPointService
+                                .ConvertAsync(files[0]);
 
-                    var editableOutputPath =
-                        await _pdfEditablePowerPointService
-                            .ConvertAsync(
-                                sourcePath);
-
-                    System.Diagnostics.Debug.WriteLine(
-                        $"Editable PPTX created: {editableOutputPath}");
+                        System.Diagnostics.Debug.WriteLine(
+                            $"Editable PPTX created: {outputPath}");
+                    }
 
                     break;
                 }
@@ -3182,27 +3117,22 @@ public partial class OverlayWindow : Window
             case "edit_image":
                 {
                     if (files.Length != 1)
-                        return;
+                        return false;
 
-                    var dialog =
-                        new ImageEditorDialog(
-                            files[0]);
+                    var dialog = new ImageEditorDialog(files[0]);
 
-                    if (dialog.ShowDialog() !=
-                        true)
-                    {
-                        return;
-                    }
+                    if (dialog.ShowDialog() != true)
+                        return false;
 
-                    if (!string.IsNullOrWhiteSpace(
-                            dialog.OutputPath))
-                    {
-                        System.Diagnostics.Debug.WriteLine(
-                            $"Image edited: {dialog.OutputPath}");
-                    }
+                    if (string.IsNullOrWhiteSpace(dialog.OutputPath))
+                        return false;
+
+                    System.Diagnostics.Debug.WriteLine(
+                        $"Image edited: {dialog.OutputPath}");
 
                     break;
                 }
+
             case "extract_zip":
                 {
                     var outputDirectories =
@@ -3220,9 +3150,7 @@ public partial class OverlayWindow : Window
             case "zip":
                 {
                     var outputPath =
-                        await _zipService
-                            .CreateAsync(
-                                files);
+                        await _zipService.CreateAsync(files);
 
                     System.Diagnostics.Debug.WriteLine(
                         $"ZIP created: {outputPath}");
@@ -3235,10 +3163,13 @@ public partial class OverlayWindow : Window
                     System.Diagnostics.Debug.WriteLine(
                         $"Action not implemented yet: {action.Id}");
 
-                    break;
+                    return false;
                 }
         }
+
+        return true;
     }
+
 
 
     // ====================================================

@@ -1,3 +1,4 @@
+
 using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
@@ -13,8 +14,7 @@ public sealed class TrayService : IDisposable
         Action onShow,
         Action onExit)
     {
-        var menu =
-            new ContextMenuStrip();
+        var menu = new ContextMenuStrip();
 
         menu.Items.Add(
             "Show",
@@ -26,44 +26,53 @@ public sealed class TrayService : IDisposable
             null,
             (_, _) => onExit());
 
-        var executablePath =
-            Environment.ProcessPath;
+        var executablePath = Environment.ProcessPath;
 
-        if (!string.IsNullOrWhiteSpace(
-                executablePath) &&
-            File.Exists(
-                executablePath))
+        if (!string.IsNullOrWhiteSpace(executablePath) &&
+            File.Exists(executablePath))
         {
             _applicationIcon =
-                Icon.ExtractAssociatedIcon(
-                    executablePath!);
+                Icon.ExtractAssociatedIcon(executablePath);
         }
 
-        _notifyIcon =
-            new NotifyIcon
-            {
-                Text =
-                    "Morph",
+        _notifyIcon = new NotifyIcon
+        {
+            Text = "Morph",
 
-                Icon =
-                    _applicationIcon ??
-                    SystemIcons.Application,
+            Icon = _applicationIcon ??
+                   SystemIcons.Application,
 
-                Visible =
-                    true,
+            Visible = true,
 
-                ContextMenuStrip =
-                    menu
-            };
+            ContextMenuStrip = menu
+        };
 
         _notifyIcon.DoubleClick +=
             (_, _) => onShow();
     }
 
+    public void ShowNotification(
+        string title,
+        string message,
+        bool isError = false)
+    {
+        if (!_notifyIcon.Visible)
+            return;
+
+        _notifyIcon.BalloonTipTitle = title;
+        _notifyIcon.BalloonTipText = message;
+
+        _notifyIcon.BalloonTipIcon =
+            isError
+                ? ToolTipIcon.Error
+                : ToolTipIcon.Info;
+
+        _notifyIcon.ShowBalloonTip(5000);
+    }
+
     public void Dispose()
     {
-        _notifyIcon.Visible =
-            false;
+        _notifyIcon.Visible = false;
 
         _notifyIcon.Dispose();
 

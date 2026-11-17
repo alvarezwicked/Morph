@@ -9,8 +9,6 @@ namespace Morph;
 
 public partial class App : System.Windows.Application
 {
-    // Один Mutex для всех экземпляров Morph
-    // в текущем сеансе Windows.
     private const string MutexName =
         @"Local\vincente.soft.Morph.SingleInstance";
 
@@ -24,8 +22,6 @@ public partial class App : System.Windows.Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
-        // Проверяем наличие другого экземпляра
-        // ДО создания окна, трея и сервисов.
         try
         {
             _instanceMutex = new Mutex(
@@ -40,7 +36,6 @@ public partial class App : System.Windows.Application
                 _instanceMutex.Dispose();
                 _instanceMutex = null;
 
-                // Другой Morph уже запущен.
                 Shutdown();
                 return;
             }
@@ -75,6 +70,17 @@ public partial class App : System.Windows.Application
             onShow: () => _overlay.ShowNearCursor(),
             onExit: Shutdown);
 
+        // Получаем уведомления из OverlayWindow
+        // и показываем их через системный трей.
+        _overlay.NotificationRequested +=
+            (title, message, isError) =>
+            {
+                _trayService?.ShowNotification(
+                    title,
+                    message,
+                    isError);
+            };
+
         _hotkeyService =
             new HotkeyService();
 
@@ -106,7 +112,6 @@ public partial class App : System.Windows.Application
         _dragDetectionService?.Dispose();
         _trayService?.Dispose();
 
-        // Освобождаем Mutex при закрытии Morph.
         if (_ownsMutex && _instanceMutex is not null)
         {
             try
@@ -115,7 +120,6 @@ public partial class App : System.Windows.Application
             }
             catch (ApplicationException)
             {
-                // Mutex уже не принадлежит потоку.
             }
         }
 
